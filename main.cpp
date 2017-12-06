@@ -12,6 +12,7 @@ class TAhoCorasick {
         size_t ParentCode = 0;
         ssize_t Parent = -1;
         ssize_t SuffLink = -1;
+        size_t Depth = 0;
     };
 
 public:
@@ -22,8 +23,8 @@ public:
             return Idx == 0;
         }
 
-        bool operator<=(const TState& other) const noexcept {
-            return Idx <= other.Idx;
+        bool IsNextTo(const TState& s) const noexcept {
+            return Depth == s.Depth + 1;
         }
 
         bool IsLeaf() const noexcept {
@@ -37,12 +38,14 @@ public:
 
     private:
         friend class TAhoCorasick;
-        TState(size_t idx, ssize_t leaf = -1)
+        TState(size_t idx, size_t depth = 0, ssize_t leaf = -1)
             : Idx(idx)
+            , Depth(depth)
             , Leaf(leaf)
         {}
 
         size_t Idx = 0;
+        size_t Depth = 0;
         ssize_t Leaf = -1;
     };
 
@@ -75,8 +78,8 @@ public:
         for (auto wordIdx = 0u; wordIdx < words.size(); ++wordIdx) {
             const auto& w = words[wordIdx];
             size_t curPos = 0;
-            for (const auto c : w) {
-                const auto code = CodeMap[c];
+            for (auto chPos = 0u; chPos < w.size(); ++chPos) {
+                const auto code = CodeMap[w[chPos]];
 
                 if (Tree[curPos].Next == -1) {
                     auto& treeNode = Tree[curPos];
@@ -91,6 +94,7 @@ public:
                     auto& newNode = Tree.back();
                     newNode.Parent = curPos;
                     newNode.ParentCode = code;
+                    newNode.Depth = chPos + 1;
                 }
                 curPos = nextNode;
             }
@@ -102,7 +106,7 @@ public:
         TState state;
         for (const auto c : s) {
             const auto newState = SwitchState(c, state);
-            if (newState <= state) {
+            if (!newState.IsNextTo(state)) {
                 return false;
             }
             state = newState;
@@ -114,7 +118,7 @@ public:
         TState state;
         for (const auto c : s) {
             const auto newState = SwitchState(c, state);
-            if (newState <= state) {
+            if (!newState.IsNextTo(state)) {
                 return false;
             }
             state = newState;
@@ -158,11 +162,12 @@ public:
             if (v == 0 || Tree[v].Parent == 0) {
                 node.SuffLink = 0;
             } else {
-                node.SuffLink = SwitchStateCode(node.ParentCode, TState(GetLink(node.Parent))).Idx;
+                node.SuffLink = SwitchStateCode(node.ParentCode, GetLink(node.Parent)).Idx;
             }
         }
+
         assert(node.SuffLink >= 0);
-        return TState(node.SuffLink, Tree[node.SuffLink].IsLeaf);
+        return TState(node.SuffLink, node.Depth, Tree[node.SuffLink].IsLeaf);
     }
 
 private:
@@ -186,7 +191,7 @@ private:
         }
 
         const auto nextNode = Ways[goOffset];
-        return TState(nextNode, Tree[nextNode].IsLeaf);
+        return TState(nextNode, Tree[nextNode].Depth, Tree[nextNode].IsLeaf);
     }
 
 private:
