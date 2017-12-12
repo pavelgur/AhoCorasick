@@ -102,7 +102,7 @@ public:
         }
     }
 
-    bool HasString(const auto& s) const noexcept {
+    bool HasString(const std::string_view& s) const noexcept {
         TState state;
         for (const auto c : s) {
             const auto newState = SwitchState(c, state);
@@ -114,7 +114,7 @@ public:
         return state.IsLeaf();
     }
 
-    bool HasPrefix(const auto& s) const noexcept {
+    bool HasPrefix(const std::string_view& s) const noexcept {
         TState state;
         for (const auto c : s) {
             const auto newState = SwitchState(c, state);
